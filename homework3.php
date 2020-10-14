@@ -41,6 +41,7 @@ function processHttpRequest($method, $uri, $headers, $body)
     $statusmessage = $messagesList[0];
     if ($method == GET) {
         preg_match_all("!\d+!", $uri, $numbers); //the sum of number is body.... I guess
+        unset($body);
         $body = array_sum($numbers[0]);
         if (strpos($uri, SUM) == false) {
             $statuscode = 404;
@@ -58,6 +59,13 @@ function processHttpRequest($method, $uri, $headers, $body)
         $statusmessage = $messagesList[2];
         $body = strtolower($messagesList[2]);
     }
+
+    unset($headers);
+    $headers[] = array("Server","Apache/2.2.14 (Win32)");
+    $headers[] = array("Connection","Closed");
+    $headers[] = array("Content-Type", "text/html; charset=utf-8");
+    $headers[] = array("Content-Length", strlen($body));
+
 
     outputHttpResponse($statuscode, $statusmessage, $headers, $body);
 }
