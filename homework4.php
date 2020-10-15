@@ -23,7 +23,6 @@ $contents = readHttpLikeInput();
 function outputHttpResponse($statuscode, $statusmessage, $headers, $body)
 {
     echo "HTTP/1.1 " . $statuscode . " " . $statusmessage . "\n";
-    echo "Date: " . date(DATE_RFC822) . "\n";
     for ($i = 0; $i < count($headers); $i++) {
         echo $headers[$i][0] . ": " . $headers[$i][1] . "\n";
     }
@@ -33,38 +32,44 @@ function outputHttpResponse($statuscode, $statusmessage, $headers, $body)
 function processHttpRequest($method, $uri, $headers, $body)
 {
     // Initialise constants for checking response
-    define("GET", "GET");
-    define("SUM", "sum");
-    define("NUMS", "nums");
-    $messagesList = array("OK", "Not Found", "Bad Request");
+    define("POST", "POST");
+    define("URI", "/api/checkLoginAndPassword");
+    define("CONTENT_TYPE", "application/x-www-form-urlencoded");
+    define("BODY", "<h1 style=\"color:green\">FOUND</h1>");
+    $messagesList = array("OK", "Bad Request", "Internal Server Error", "Login And Password Not Found");
     $statuscode = 200;
     $statusmessage = $messagesList[0];
-    if ($method == GET) {
-        preg_match_all("!\d+!", $uri, $numbers); //the sum of number is body.... I guess
-        unset($body);
-        $body = array_sum($numbers[0]);
-        if (strpos($uri, SUM) == false) {
-            $statuscode = 404;
-            $statusmessage = $messagesList[1];
-            $body = strtolower($messagesList[1]);
-        }
+    if ($method == POST && $uri == URI) {
+        $splittedBody = explode("&", $body);
+        $login = explode("=", $splittedBody[0])[1];    //Get login
+        $password = explode("=", $splittedBody[1])[1]; //Get password
+        $inputtedData = $login . ":" . $password;
 
-        if (strpos($uri, NUMS) == false) {
-            $statuscode = 400;
+        if (file_get_contents("password.txt") == false) {   //If file doesn't exist
+            $statuscode = 500;
             $statusmessage = $messagesList[2];
             $body = strtolower($messagesList[2]);
+        } else {
+            $dataBase = explode("\n", file_get_contents("password.txt")); // Gets content from file
+            if (array_search($inputtedData, $dataBase) == true) {
+                $body = BODY;
+            } else {
+                $statuscode = 404;
+                $statusmessage = $messagesList[3];
+                $body = strtolower($messagesList[3]);
+            }
         }
     } else {
         $statuscode = 400;
-        $statusmessage = $messagesList[2];
-        $body = strtolower($messagesList[2]);
+        $statusmessage = $messagesList[1];
+        $body = strtolower($messagesList[1]);
     }
     // Refilling variable "$headers" that already exists with new data
     unset($headers);
     $headers[] = array("Server", "Apache/2.2.14 (Win32)");
+    $headers[] = array("Content-Length", strlen($body));
     $headers[] = array("Connection", "Closed");
     $headers[] = array("Content-Type", "text/html; charset=utf-8");
-    $headers[] = array("Content-Length", strlen($body));
 
     outputHttpResponse($statuscode, $statusmessage, $headers, $body);
 }
